@@ -1,4 +1,4 @@
-# Analytical Insights into IOS App Profitability: A Comprehensive Study of the Apple App Store
+# Analytical Insights Into IOS App Profitability: A Comprehensive Study of the Apple App Store
 
 ## Introduction
 
