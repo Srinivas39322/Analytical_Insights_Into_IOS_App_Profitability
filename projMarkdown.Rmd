@@ -1,0 +1,927 @@
+---
+title: "Analytical Insights into iOS App Profitability"
+author: "Krishnasurya Gopalakrishnan, Monica Muniraj, Shashank Shivakumar, Srinivas Saiteja Tenneti"
+output: 
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  #pdf_document:
+   # toc: yes
+    #toc_depth: '3'
+---
+
+<!-- Our Project uses a Apple Appstore data which has 21 columns. The variables are: -->
+
+<!-- 1.App_Id - Unique identifier for the app -->
+
+<!-- 2.App_Name - Name of the app -->
+
+<!-- 3.AppStore_Url - URL for the app on the Apple App Store -->
+
+<!-- 4.Primary_Genre - Main genre of the app -->
+
+<!-- 5.Content_Rating- Age rating for the app -->
+
+<!-- 6.Size_Bytes - Size of the app in bytes -->
+
+<!-- 7.Required_IOS_Version - Minimum iOS version required to run the app -->
+
+<!-- 8.Released - Release date of the app -->
+
+<!-- 9.Updated - Last update date of the app -->
+
+<!-- 10.Version - Current version of the app -->
+
+<!-- 11.Price - Price of the app -->
+
+<!-- 12.Currency - Currency of the app price -->
+
+<!-- 13.Free - Whether the app is free or not -->
+
+<!-- 14.DeveloperId - Unique identifier for the app's developer -->
+
+<!-- 15.Developer - Name of the app's developer -->
+
+<!-- 16.Developer_Url - URL of the developer on the Apple App Store -->
+
+<!-- 17.Developer_Website - Official website of the developer -->
+
+<!-- 18.Average_User_Rating - Average rating given by users -->
+
+<!-- 19.Reviews - Number of reviews -->
+
+<!-- 20.Current_Version_Score - Rating for the current version of the app -->
+
+<!-- 21.Current_Version_Reviews - Number of reviews for the current version of the app -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3)
+
+library(ezids)
+library(tidyr)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+```
+
+<!-- # Data Preprocessing -->
+
+<!-- ### Reading the AppleStore data into dataframe -->
+
+<!-- ```{r read_csv} -->
+
+<!-- appData = read.csv('appleAppData.csv') -->
+
+<!-- ``` -->
+
+<!-- ### Dimenstions of the dataframe -->
+
+<!-- ```{r dataset_dimension} -->
+
+<!-- dim(appData) -->
+
+<!-- ``` -->
+
+<!-- ### Datatype of columns -->
+
+<!-- ```{r dataset_structure} -->
+
+<!-- str(appData) -->
+
+<!-- ``` -->
+
+<!-- ### Summary of the dataset -->
+
+<!-- ```{r dataset_summary} -->
+
+<!-- summary(appData) -->
+
+<!-- ``` -->
+
+<!-- ### First and Last few observations of the dataframe -->
+
+<!-- ```{r dataset_rows} -->
+
+<!-- head(appData,2) -->
+
+<!-- tail(appData,2) -->
+
+<!-- ``` -->
+
+<!-- ### Listing the numerical and categorical variables(columns) -->
+
+<!-- ```{r numerical_and_categorial_cols} -->
+
+<!-- numerical_cols <- sapply(appData, is.numeric) -->
+
+<!-- numerical_colnames <- names(appData)[numerical_cols] -->
+
+<!-- categorical_colnames <- names(appData)[!numerical_cols] -->
+
+<!-- max_length <- max(length(numerical_colnames), length(categorical_colnames)) -->
+
+<!-- numerical_colnames <- c(numerical_colnames, rep(NA, max_length - length(numerical_colnames))) -->
+
+<!-- categorical_colnames <- c(categorical_colnames, rep(NA, max_length - length(categorical_colnames))) -->
+
+<!-- var_df <- data.frame(Numeric = numerical_colnames, Categorical = categorical_colnames) -->
+
+<!-- print(var_df) -->
+
+<!-- ``` -->
+
+<!-- ## Missing values -->
+
+<!-- ### Checking all missing values in the dataset -->
+
+<!-- ```{r check_missing_values} -->
+
+<!-- na_counts <- sapply(appData, function(col) sum(is.na(col))) -->
+
+<!-- blank_counts <- sapply(appData, function(col) sum(col == "" | col == " ")) -->
+
+<!-- result <- data.frame(Column = names(appData), NA_Count = na_counts, Blank_Count = blank_counts) -->
+
+<!-- print(result) -->
+
+<!-- ``` -->
+
+<!-- ### Numerical column NAs -->
+
+<!-- **Barplot showing the number of missing values in columns 'Price' and 'Size_Bytes' columns** -->
+
+<!-- ```{r numerical_missing_values_barplot} -->
+
+<!-- #Calculate missing values per column -->
+
+<!-- missing_values_per_column <- colSums(is.na(appData)) -->
+
+<!-- # Create a data frame with column names and missing values -->
+
+<!-- missing_data <- data.frame(Column = names(missing_values_per_column), -->
+
+<!--                            MissingValues = missing_values_per_column) -->
+
+<!-- ggplot(missing_data, aes(x = Column, y = MissingValues)) + -->
+
+<!--   geom_bar(stat = "identity", fill = "plum3") + -->
+
+<!--   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + -->
+
+<!--   labs(x = "Column Names", y = "Number of Missing Values",  -->
+
+<!--        title = "Number of Missing Values in the dataset") -->
+
+<!-- ``` -->
+
+<!-- ### Categorical column NAs -->
+
+<!-- **Barplot showing the number of missing values in columns 'Developer_Url', 'Developer_Website' and 'Released' columns** -->
+
+<!-- ```{r categorical_missing_values_barplot} -->
+
+<!-- blank_developer_url <- sum(is.na(appData$Developer_Url) | appData$Developer_Url == "") -->
+
+<!-- blank_developer_website <- sum(is.na(appData$Developer_Website) | appData$Developer_Website == "") -->
+
+<!-- Released <- sum(is.na(appData$Released) | appData$Released == "") -->
+
+<!-- # Create a data frame for plotting -->
+
+<!-- missing_data <- data.frame( -->
+
+<!--   Column = c('Developer_Url', 'Developer_Website', 'Released'), -->
+
+<!--   Missing_Values = c(blank_developer_url, blank_developer_website, Released) -->
+
+<!-- ) -->
+
+<!-- developer_website_data <- subset(missing_data, Column == "Developer_Website") -->
+
+<!-- other_data <- subset(missing_data, Column != "Developer_Website") -->
+
+<!-- custom_colors <- c("Developer_Url" = "indianred4", "Developer_Website" = "indianred3", "Released"="indianred2") -->
+
+<!-- # Plot for Developer_Website -->
+
+<!-- plot1 <- ggplot(developer_website_data, aes(x = Column, y = Missing_Values)) + -->
+
+<!--   geom_bar(stat = "identity", aes(fill = Column), width = 0.5) + -->
+
+<!--   scale_fill_manual(values = custom_colors) + -->
+
+<!--   labs(title = "Missing Values in Developer_Website", -->
+
+<!--        x = "", -->
+
+<!--        y = "Number of Missing Values") + -->
+
+<!--   theme_minimal() + -->
+
+<!--   scale_y_continuous(labels = scales::comma) -->
+
+<!-- # Plot for Developer_Url and Released -->
+
+<!-- plot2 <- ggplot(other_data, aes(x = Column, y = Missing_Values)) + -->
+
+<!--   geom_bar(stat = "identity", aes(fill = Column), width = 0.5) + -->
+
+<!--   scale_fill_manual(values = custom_colors) + -->
+
+<!--   labs(title = "Missing Values in Developer_Url \nand Released", -->
+
+<!--        x = "", -->
+
+<!--        y = "Number of Missing Values") + -->
+
+<!--   theme_minimal() + -->
+
+<!--   scale_y_continuous(labels = scales::comma) -->
+
+<!-- # Combine plots -->
+
+<!-- grid.arrange(plot1, plot2, ncol = 2) -->
+
+<!-- ``` -->
+
+<!-- ## Handling missing values -->
+
+<!-- **Removing row with NA value in AppName column** -->
+
+<!-- ```{r remove_na_in_appname} -->
+
+<!-- appData <- subset(appData, !is.na(App_Name)) -->
+
+<!-- ``` -->
+
+<!-- **Dropping 'Developer_Website' column as it is not used in the analysis and has missing values for over half the dataset** -->
+
+<!-- ```{r drop_dw_col} -->
+
+<!-- appData = subset(appData, select = -c(Developer_Website)) -->
+
+<!-- head(appData, 1) -->
+
+<!-- ``` -->
+
+<!-- **Dropping blanks in 'Released' column** -->
+
+<!-- ```{r drop_blanks_in_released_col} -->
+
+<!-- appData <- appData %>% filter(!is.na(Released) & Released != "") -->
+
+<!-- print(tail(appData,4)) -->
+
+<!-- ``` -->
+
+<!-- **Updating NA values in numerical columns 'Price' and 'Size_Bytes' with their respective means** -->
+
+<!-- ```{r replace_numerical_na_with_means} -->
+
+<!-- df_p_sb <- subset(appData, select=c("Price", "Size_Bytes")) -->
+
+<!-- head(df_p_sb, 1) -->
+
+<!-- meanvals <- as.list(colMeans(df_p_sb, na.rm = TRUE)) -->
+
+<!-- print(meanvals) -->
+
+<!-- df_p_sb <- replace_na(df_p_sb, meanvals) -->
+
+<!-- head(df_p_sb, 1) -->
+
+<!-- appData = subset(appData, select = -c(Price)) -->
+
+<!-- appData = subset(appData, select = -c(Size_Bytes)) -->
+
+<!-- appData <- cbind(appData, Price = df_p_sb$Price) -->
+
+<!-- appData <- cbind(appData, Size_Bytes = df_p_sb$Size_Bytes) -->
+
+<!-- head(appData, 1) -->
+
+<!-- ``` -->
+
+<!-- **Final checking for missing values** -->
+
+<!-- ```{r final_check_for_missing_vals_barplot} -->
+
+<!-- # Calculate missing values per column -->
+
+<!-- missing_values_per_column_2 <- colSums(is.na(appData)) -->
+
+<!-- # Create a data frame with column names and missing values -->
+
+<!-- missing_data_2 <- data.frame(Column = names(missing_values_per_column_2), -->
+
+<!--                            MissingValues = missing_values_per_column_2) -->
+
+<!-- ggplot(missing_data_2, aes(x = Column, y = MissingValues)) + -->
+
+<!--   geom_bar(stat = "identity", fill = "skyblue") + -->
+
+<!--   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + -->
+
+<!--   labs(x = "Column Names", y = "Number of Missing Values 2",  -->
+
+<!--        title = "Number of Missing Values in the dataset") -->
+
+<!-- missing_values_per_column <- colSums(is.na(appData)) -->
+
+<!-- print(missing_values_per_column <- colSums(is.na(appData))) -->
+
+<!-- ``` -->
+
+<!-- **Checking for duplicates** -->
+
+<!-- ```{r check_duplicated} -->
+
+<!-- print(sum(duplicated(appData))) -->
+
+<!-- ``` -->
+
+<!-- ## Datetime columns -->
+
+<!-- **Converting 'Released' and 'Updated' columns datatype from object to time format** -->
+
+<!-- ```{r dt_cols_format} -->
+
+<!-- appData$Updated <- format(ymd_hms(appData$Updated), "%m-%d-%Y %H:%M:%S") -->
+
+<!-- appData$Released <- format(ymd_hms(appData$Released), "%m-%d-%Y %H:%M:%S") -->
+
+<!-- appData$Released <- as.POSIXct(strptime(appData$Released, "%m-%d-%Y %H:%M:%S")) -->
+
+<!-- appData$Updated <- as.POSIXct(strptime(appData$Updated, "%m-%d-%Y %H:%M:%S")) -->
+
+<!-- print(head(appData,1)) -->
+
+<!-- ``` -->
+
+## Introduction
+
+<p>
+
+In the dynamic world of mobile applications, a pressing question resonates among developers and investors: where should they channel their resources, and what elements truly dictate an app's success? As 2021 came to a close, the App Store, with its impressive roster of 1.6 million iOS applications, stood out as a hub of innovation and potential, even in comparison to Google's expansive Play Store with its 3.5 million apps.
+
+This report embarks on an analytical journey into the second-largest app marketplace worldwide -- Apple's App Store. Here, we aim to unravel the myriad factors that determine an app's trajectory, from its pricing and size to user ratings and categories. These aren't just statistics; they form the foundation of strategic decision-making.
+
+Our primary goal is straightforward: discern the pivotal variables that substantially impact an app's market success and profitability. For stakeholders, understanding these nuances is essential, providing a compass in the intensely competitive landscape of app development and marketing. This exploration aims to convert data into actionable insights, offering a roadmap to success.
+
+Join us in this analytical expedition, where data narratives guide our way, and each insight serves as a beacon for informed strategic choices. Step into a world where in-depth research becomes the linchpin to harnessing the vast potential of the mobile application universe.
+
+</p>
+
+## Descriptive statistics
+
+```{r data_preprocessing}
+appData = read.csv('appleAppData.csv')
+
+# Dropping NA
+appData <- subset(appData, !is.na(App_Name))
+appData = subset(appData, select = -c(Developer_Website))
+appData <- appData %>% filter(!is.na(Released) & Released != "")
+
+# Replacing NA
+df_p_sb <- subset(appData, select=c("Price", "Size_Bytes"))
+meanvals <- as.list(colMeans(df_p_sb, na.rm = TRUE))
+df_p_sb <- replace_na(df_p_sb, meanvals)
+appData = subset(appData, select = -c(Price))
+appData = subset(appData, select = -c(Size_Bytes))
+appData <- cbind(appData, Price = df_p_sb$Price)
+appData <- cbind(appData, Size_Bytes = df_p_sb$Size_Bytes)
+
+# Datetime columns
+appData$Updated <- format(ymd_hms(appData$Updated), "%m-%d-%Y %H:%M:%S")
+appData$Released <- format(ymd_hms(appData$Released), "%m-%d-%Y %H:%M:%S")
+appData$Released <- as.POSIXct(strptime(appData$Released, "%m-%d-%Y %H:%M:%S"))
+appData$Updated <- as.POSIXct(strptime(appData$Updated, "%m-%d-%Y %H:%M:%S"))
+
+str(appData)
+```
+
+## Number of Apps per Genre
+
+```{r apps_per_genre_barplot_1}
+genre_counts <- appData %>%
+  group_by(Primary_Genre) %>%
+  summarise(App_Count = n())
+
+#genre_counts
+
+ggplot(genre_counts, aes(x = Primary_Genre, y = App_Count)) +
+  geom_bar(stat = 'identity', fill = 'blue', alpha = 0.5) +
+  labs(title = "Number of Apps per Genre", x = "Genre", y = "Count of Apps") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The graph is illustrating the distribution of mobile apps across various categories. The most notable observation is the dominance of the "Games" genre, with its count significantly surpassing other categories. In contrast, "Stickers", "Navigation", and "News" are among the least populated genres. The distribution is varied: while a few genres like "Games" show extreme popularity, many genres exhibit moderate or low counts. Genres such as "Book", "Business", and "Weather" occupy a mid-range position in the distribution. The design adopts uniform shades of blue for each bar, emphasizing the differences in bar heights. In essence, the chart reveals a skewed distribution of apps, highlighting the prominence of entertainment-focused apps and suggesting potential market saturation or user preference trends in the app industry.
+
+## Total Revenue vs Genre of Apps
+
+```{r revenue_by_genre_barplot_2}
+appData$Revenue <- appData$Price * appData$Reviews
+
+revenue_by_genre <- appData %>%
+group_by(Primary_Genre) %>%
+summarise(Total_Revenue = sum(Revenue))
+
+ggplot(revenue_by_genre, aes(x = reorder(Primary_Genre, -Total_Revenue), y = Total_Revenue)) +
+  geom_bar(stat='identity', fill='seagreen4') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Revenue by Genre", x = "Genre", y = "Total Revenue")+
+  scale_y_continuous(labels = scales::comma)
+```
+
+The chart presents the distribution of estimated revenue across various app genres. Visually, the distribution is notably right skewed. The "Games" genre stands out significantly, generating the highest revenue by a large margin. Following it, genres like "Photo & Video", "Business", and "Education" have a noticeable but considerably lower revenue. As we traverse to the right, many genres such as "Developer Tools", "Magazines & Newspapers", and "Stickers" show minimal revenue. This disparity suggests that while "Games" are dominant revenue earners, other genres struggle to achieve comparable financial success. The consistent green shade for bars accentuates the stark differences in revenue heights across genres. For EDA purposes, this chart vividly illustrates the prevailing revenue trends in the app market, emphasizing the disproportionate contribution of the gaming sector. It's essential to note that the depicted revenue was estimated by multiplying the number of reviews with app prices, as there was no direct "Revenue" column.
+
+## Gaming apps
+
+### Frequency over years
+
+```{r gaming_apps_count_over_years_barplot_3}
+# Extract release and update years
+appData$Release_Year <- year(appData$Released)
+appData$Update_Year <- year(appData$Updated)
+
+# Count the number of games per release year
+games_per_year <- appData %>%
+  group_by(Release_Year) %>%
+  tally()
+
+# Plot the bar graph
+ggplot(games_per_year, aes(x = Release_Year, y = n)) +
+  geom_bar(stat = 'identity', fill = 'orange4', alpha = 0.5) +
+  labs(title = "Number of Games Released Per Year", x = "Release Year", y = "Number of Games") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The graph depicts the annual trend of game releases from 2010 to beyond 2020. The distribution showcases a pronounced upward trend(left skewed). Starting from 2010, where game releases are notably few, there's a consistent and almost exponential rise in the number of games released each year. Around 2015, there's a slight dip in releases, but the general trend remains ascendant. Post-2015, the growth appears more linear until around 2020, where a minor decline is observable. Notably, the highest number of games was released just before 2020, nearly reaching 200,000. The shade of the bars darkens progressively, mirroring the growth in numbers, reinforcing the visual impact. This EDA suggests that the gaming industry has seen remarkable expansion over the decade, with developers increasing their output every year, underscoring the booming nature of the gaming sector during this period.
+
+### Reviews & Rating vs Year
+
+```{r gaming_apps_reviews_and_ratings_over_years_barplot_4}
+games_data <- appData[appData$Primary_Genre == 'Games', ]
+games_data$Year <- year(as.Date(games_data$Released, format="%d-%m-%Y %H:%M:%S"))
+
+games_by_year <- games_data %>%
+  filter(!is.na(Year)) %>%
+  group_by(Year) %>%
+  summarise(
+    Total_Reviews = sum(Reviews, na.rm = TRUE),
+    Average_Rating = mean(Average_User_Rating, na.rm = TRUE)
+  )
+
+ggplot(games_by_year, aes(x = as.factor(Year))) +
+  geom_col(aes(y = Total_Reviews), fill = 'pink4', alpha = 0.5) +
+  geom_line(aes(y = Average_Rating*1000000, group=1), color = 'lightcyan4') +  # scaled for visualization
+  geom_point(aes(y = Average_Rating*1000000), color = 'lightcyan4') +
+  labs(title = "Distribution of Reviews and Rating Over Years", x = "Year", y = "Metrics") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(labels = scales::comma)
+
+```
+
+The graph displays the evolution of two key metrics from 2008 to 2022: total reviews (represented by bars) and average rating (illustrated by the line graph). From 2008 to 2014, the total reviews remained relatively low, with slight fluctuations but started showing a notable increase from 2015 onwards. The peak occurred around 2019 with nearly 50 million reviews, followed by a decline in 2020 and 2021. The average rating, although scaled for visualization purposes, remained fairly stable over the years, hovering around a constant value, indicating a consistency in user feedback despite the varying number of reviews.
+
+The EDA unveils a period of explosive growth in the total reviews from 2015 to 2019, suggesting increased user engagement or product releases. However, the steady average rating underscores that while the quantity of feedback changed, the qualitative aspect of the products or services maintained a consistent standard over the years.
+
+## Release and Update Frequency over the years
+
+```{r release_and_update_frequency_over_years_linechart_5}
+
+# Calculate the number of releases and updates per year
+release_counts <- table(appData$Release_Year)
+update_counts <- table(appData$Update_Year)
+
+# Create a data frame for plotting
+plot_data <- data.frame(Year = as.numeric(names(release_counts)),
+                        Releases = as.numeric(release_counts),
+                        Updates = as.numeric(update_counts))
+
+# Plot line chart with solid line and dots for Releases, and solid line with cross marks for Updates
+ggplot(plot_data, aes(x = Year)) +
+  geom_line(aes(y = Releases, color = "Releases"), linetype = "solid", size = 1) +
+  geom_point(aes(y = Releases, color = "Releases"), shape = 16, size = 3) +  # Shape 16 represents dots
+  geom_line(aes(y = Updates, color = "Updates"), linetype = "solid", size = 1) +
+  geom_point(aes(y = Updates, color = "Updates"), shape = 4, size = 3) +  # Shape 4 represents diamond
+  labs(x = "Year", y = "Count", title = "Release and Update Frequency Over Time") +
+  scale_color_manual(values = c("Releases" = "blue", "Updates" = "green")) +
+  theme_minimal() + theme(legend.position="top") +
+  scale_x_continuous(breaks = seq(2008, 2022, 1)) +
+  scale_y_continuous(labels = scales::comma)
+```
+
+The graph illustrates the evolution of app releases and updates from 2008 to 2021. For much of the early period (2008-2016), the frequencies of both updates and releases were relatively low, with a slight edge for updates. A discernible growth in both metrics begins post-2016. The number of releases followed a moderate upward trajectory, while updates saw a steeper rise.
+
+A significant point of interest is the pronounced spike in updates in 2020, reaching nearly 400,000. This surge aligns with the onset of the COVID-19 pandemic and the consequent lockdowns. With the world shifting to online platforms for myriad purposes, there was an evident heightened demand for app functionalities and refinements. Developers seemingly responded to this demand, resulting in the spike. Though updates receded post-2020, they stayed well above the numbers seen in the pre-pandemic years. The data for 2022 is excluded, as observations are available only up to 2021.
+
+## Content Rating
+
+### Frequency and Distribution
+
+```{r apps_by_contentrating_barplot_6}
+
+# Arrange data by the count of 'Content_Rating' in descending order
+ordered_ratings <- appData %>%
+  group_by(Content_Rating) %>%
+  summarise(count = n()) %>%
+  arrange(-count) %>%
+  .$Content_Rating
+
+# Create the bar plot
+bar_plot <- ggplot(appData, aes(x = Content_Rating)) +
+  geom_bar(aes(fill = Content_Rating), show.legend = FALSE) +
+  scale_x_discrete(limits = ordered_ratings) +  # Order bars
+  labs(title = "Number of Apps by Content Rating", x = "Content Rating", y = "Number of Apps")
+
+
+rating_counts <- table(appData$Content_Rating)
+
+# Create a data frame for the pie chart
+rating_data <- data.frame(Content_Rating = names(rating_counts), Count = as.numeric(rating_counts))
+
+# Define the desired order for sorting the "Name" column
+desired_order <- c("4+", "9+", "12+", "17+", "Not yet rated")
+
+# Sort the data frame based on the "Name" column using the desired order
+rating_data <- rating_data %>%
+  arrange(factor(Content_Rating, levels = desired_order))
+
+# Calculate percentages
+rating_data$Percentage <- (rating_data$Count / sum(rating_data$Count)) * 100
+rating_data$Percentage <- round(rating_data$Percentage, 2)
+
+custom_colors <- c("#f8766d", "#a3a500", "#00bf7d", "#00b0f6", "slategrey")
+# Create a pie chart-like plot
+pie_chart <- ggplot(rating_data, aes(x = 1, y = Percentage, fill = Content_Rating)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Pie Chart: Content Rating", fill = "Content Rating") +
+  scale_fill_manual(values = custom_colors) +
+  theme_void() +
+  theme(legend.position = "right")
+
+grid.arrange(bar_plot, pie_chart, ncol=2)
+
+rating_data
+```
+
+<p>The bar chart shows the prevalence of apps whose minimum maturity rating is 4+ among apps with content rating of 9+, 12+ and 17+. While checking for the distribution of 4+ apps using a pie chart we can see that about a whopping 80% of the market is dominated by them. But this still does not give us the full story on whether all of these apps are from just a few genres like Games, Education etc.</p>
+
+### Genre vs. Content Rating
+
+```{r genre_vs_contentrating_spbarplot_8}
+pg_cr <- subset(appData, select = c('Primary_Genre', 'Content_Rating'))
+pg_cr_agg <- pg_cr %>%
+             group_by(Primary_Genre, Content_Rating) %>%
+            summarise(total_count = n(), .groups = 'drop') %>%
+            pivot_wider(names_from = Content_Rating, values_from = total_count, values_fill = 0)
+# print(pg_cr_agg)
+col_order <- c("Primary_Genre", "4+", "9+", "12+", "17+", "Not yet rated")
+pg_cr_agg <- pg_cr_agg[, col_order]
+# pg_cr_agg
+
+
+pgcr_data_long <- pg_cr_agg %>%
+  gather(Rating, Count, -Primary_Genre)
+
+# Calculate percentages within each Primary_Genre
+pgcr_data_longg <- pgcr_data_long %>%
+  group_by(Primary_Genre) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# Create a stacked percentage bar chart with Primary_Genre on the x-axis
+ggplot(pgcr_data_longg, aes(x = Primary_Genre, y = Percentage, fill = Rating)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Percentage Distribution of 'Content Rating' across 'Genre'", caption = 'Stacked Percentage Bar Chart', x = "Primary Genre", y = "Content Rating %") +
+  scale_fill_manual(values = c("4+" = "gold", "9+" = "darkorange", "12+" = "brown2", "17+" = "firebrick3", "Not yet rated" = "red4")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))
+```
+
+<p>This graph hows that apps belonging to the 4+ category take up almost over 75% of the total apps in each category and are almost evenly distributed in all the genres with a few exceptions in Medicine, Social Networking and News.</p>
+
+### Pearson's Chi-squared and ANOVA tests
+
+**Pearson's Chi-squared test between Genre and Content_Rating**
+
+```{r chisq_test}
+# Create a contingency table
+contingency_table <- table(appData$Primary_Genre, appData$Content_Rating)
+
+# Perform the chi-squared test
+chi_square_result <- chisq.test(contingency_table)
+
+# View the test result
+print(chi_square_result)
+```
+
+<p>
+
+The Pearson's Chi-squared test is a statistical test that determines if there's a significant association between two categorical variables. In this instance, the test was conducted to examine the relationship between "Primary Genre" and "Content_Rating".
+
+Null hypothesis ($H_0$)- No dependence between the two variables <br> Alternate hypothesis ($H_1$) - Casual dependence exists between the two variables
+
+The test output provides several key pieces of information:
+
+1.  **X-squared**: The chi-squared statistic is 167,518. This value represents the discrepancy between the observed frequencies in the contingency table and the expected frequencies under the assumption that "Genre" and "Content_Rating" are independent.
+
+2.  **df**: Degrees of freedom, which is 100 in this case. It's an important parameter that determines the shape of the chi-squared distribution and is calculated based on the dimensions of the contingency table.
+
+3.  **p-value**: The p-value is less than 2.2e-16, which is virtually zero. A p-value this low suggests that the observed data is highly inconsistent with the assumption of independence between the two variables. Thus we reject the null hypothesis and adopt the alternate hypothesis.
+
+In conclusion, even though the graph depicts an almost even distribution between "Genre" and "Content_Rating", the proportions of Content Rating are not uniform across different genres. This disparity, possibly influenced by specific genres, results in a statistically significant association between the two variables. Hence, knowing an app's genre might give insights into its content rating and vice versa.
+
+</p>
+
+**ANOVA test for Primary Genre vs. Average UserRating**
+
+```{r anova_test}
+aov_result <- aov(Average_User_Rating ~ Primary_Genre, data=appData)
+summary(aov_result)
+```
+
+The results of ANOVA (Analysis of Variance) test comparing the \`Primary_Genre\` to the \`Average_User_Rating\` depicts.
+
+1.  **Primary_Genre**: Represents the different levels or categories of the \`Primary_Genre\` variable. The \`25\` under this indicates there are 25 different genres being compared.
+
+2.  **Df (Degrees of Freedom)**: <br>For Primary_Genre: 25, which means there are 26 genres being compared (df is one less than the number of levels). <br>For Residuals: 1230346, representing the variability within each genre group.
+
+3.  **Sum Sq (Sum of Squares)**: <br>For Primary_Genre: 250995, represents the between-group variability. <br>For Residuals: 5458134, represents the within-group variability.
+
+4.  **Mean Sq (Mean Squares)**: <br>For Primary_Genre: 10040, the average variance explained by genres. <br>For Residuals: 4, the average variability within each genre.
+
+5.  **F value**: 2263 indicates the test statistic used to determine if the means of several groups are equal. It's calculated by dividing the Mean Sq of Primary_Genre by the Mean Sq of Residuals.
+
+6.  **Pr(\>F)**: Indicates the p-value, which is less than 2e-16 (extremely small), signifying strong evidence against the null hypothesis.
+
+7.  **Signif. codes**: A shorthand to describe the significance of results. The \`\<2e-16 \*\` indicates that the results are highly significant.
+
+**Null Hypothesis (**$H_0$): The average user rating is the same across all primary genres.
+
+**Alternate Hypothesis (**$H_1$): The average user rating is not the same for at least one primary genre when compared to others.
+
+Given the extremely small p-value (much less than 0.05), we would reject the null hypothesis, suggesting that there's a statistically significant difference in the average user rating across different primary genres.
+
+## Analysis of Price
+
+### Frequency
+
+**Frequency of 'Price' for sampled data**
+
+```{r sampling_dataset_and_price_freq_barplot_9}
+# Sampling 1000 rows from the dataset
+sampled_data <- appData %>%
+  sample_n(1000)
+# Created custom bins for Average_User_Rating (e.g., every 0.5 units)
+sampled_data$Rating_Group <- cut(sampled_data$Average_User_Rating,
+                                 breaks = seq(0, 5, by = 0.5),
+                                 labels = seq(0.25, 4.75, by = 0.5))
+
+ggplot(sampled_data, aes(x = factor(Price))) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of App Prices (Sampled Data)",
+       x = "Price",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)
+)
+```
+
+<p>The above bar chart shows the distribution of Price (in USD) for a sampled dataset. A staggering 90% of the market consists of apps that are free (Price = 0). There is an instant drop from price 0 to about 1 USD. Followed by a steady decline as the price increases.</p>
+
+### Distribution
+
+**Distribution of Free and Paid apps**
+
+```{r free_vs_paid_apps_barplot_spbarplot_10_11_12}
+fp <- subset(appData, select = c('Primary_Genre', 'Free'))
+fp_agg <- fp %>%
+             group_by(Primary_Genre, Free) %>%
+            summarise(total_count = n(), .groups = 'drop') %>%
+            pivot_wider(names_from = Free, values_from = total_count, values_fill = 0)
+# fp_agg
+colnames(fp_agg) <- c("Primary_Genre", "Paid", "Free")
+# fp_agg
+
+sum_of_paid <- sum(fp_agg$Paid)
+sum_of_free <- sum(fp_agg$Free)
+total_apps <- sum_of_paid + sum_of_free
+
+# Sample data
+free_paid <- data.frame(
+  Category = c("Paid", "Free"),
+  Value = c(round((sum_of_paid/total_apps)*100, 2), round((sum_of_free/total_apps)*100,2)))
+
+# free_paid
+custom_colorss <- c("yellowgreen", "chocolate2")
+
+# Create a pie chart
+p <- ggplot(free_paid, aes(x = "", y = Value, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Pie Chart for Free & Paid") +
+  scale_fill_manual(values = custom_colorss) +
+geom_text(aes(label = Value), position = position_stack(vjust = 0.5))
+p
+
+# Reshape the data to long format
+fp_agg_long <- fp_agg %>%
+  gather(Type, Count, -Primary_Genre)
+
+ggplot(fp_agg_long, aes(x = Primary_Genre, y = Count, fill = Type)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  labs(title = "Distribution of 'Free & Paid' apps across 'Genre'", caption = 'Grouped Bar Chart', x = "Primary Genre", y = "No. of. apps") +
+  scale_fill_manual(values = c("Paid" = "chocolate2", "Free" = "yellowgreen")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Calculate percentages within each Primary_Genre
+fp_agg_longg <- fp_agg_long %>%
+  group_by(Primary_Genre) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# fp_agg_longg
+
+# Create a stacked percentage bar chart with Primary_Genre on the x-axis
+ggplot(fp_agg_longg, aes(x = Primary_Genre, y = Percentage, fill = Type)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Percentage Distribution of 'Free & Paid' apps across 'Genre'", caption = 'Stacked Percentage Bar Chart', x = "Primary Genre", y = "Free & Paid apps %") +
+  scale_fill_manual(values = c("Paid" = "chocolate2", "Free" = "yellowgreen")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))
+```
+
+<p>The pie chart shows that 8.37% of the content is free, while 91.63% of the content is paid.It's evident that the majority of apps on the App Store are free, with only a smaller portion being paid. The bar chart shows the distribution of free and paid apps across genres in the Apple App Store.The most popular genre is Games, with over 500,000 free and paid apps combined whereas Books, Developer tools, Magazines & Newspapers genres have the fewest free and paid apps.The number of free apps in each genre is typically several times higher than the number of paid apps. The stacked percentage bar chart shows the percentage distribution of free and paid apps across genres. We see that stickers app despite accounting for a very little percentage of the market, has the highest paid apps followed by developer tools and graphics & design.</p>
+
+## Analysis of Ratings
+
+### Frequency
+
+**Frequency of 'Average_User_Rating' for sampled data**
+
+```{r rating_freq_barplot_13}
+### Bar plot for grouped Average_User_Rating :
+ggplot(sampled_data, aes(x = Rating_Group)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Average User Ratings (Sampled Data)",
+       x = "Average User Rating",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+<p>From the bar plot obtained from the above, we could see from the distribution of the average user rating that there is a big disparity between ratings that are given and ratings that are not given (NA). Additionally, we can infer that the majority of users either provide ratings above 4.25 or do not provide any ratings.</p>
+
+**Creating User_Rating_Type column for various ranges of the ratings**
+
+```{r create_user_rating_type_col}
+appData$User_Rating_Type <- with(appData, ifelse(Average_User_Rating > 4, 'Rating 4 to 5',
+                                          ifelse(Average_User_Rating > 3, 'Rating 3 to 4',
+                                          ifelse(Average_User_Rating > 2, 'Rating 2 to 3',
+                                          ifelse(Average_User_Rating > 1, 'Rating 1 to 2',
+                                          ifelse(Average_User_Rating > 0, 'Rating 0 to 1', 'No rating'))))))
+# head(appData, 10)
+```
+
+### Distribution
+
+**Distribution of Rating types across Genre**
+
+```{r genre_vs_user_rating_type_spbarplot_14}
+genre_user_rating_type = subset(appData, select = c("Primary_Genre", "User_Rating_Type"))
+agg_table_2 <- genre_user_rating_type %>%
+             group_by(Primary_Genre, User_Rating_Type) %>%
+            summarise(total_count = n(), .groups = 'drop') %>%
+            pivot_wider(names_from = User_Rating_Type, values_from = total_count, values_fill = 0)
+# print(agg_table_2)
+
+# Reshape the data to long format
+data_long <- agg_table_2 %>%
+  gather(Rating, Count, -Primary_Genre)
+# print(data_long)
+
+data_longg <- data_long %>%
+  group_by(Primary_Genre) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# data_longg
+
+# Create a stacked percentage bar chart with Primary_Genre on the x-axis
+ggplot(data_longg, aes(x = Primary_Genre, y = Percentage, fill = Rating)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Percentage Distribution of 'Rating Types' across 'Genre'", caption = 'Stacked Percentage Bar Chart', x = "Primary Genre", y = "Rating Types %") +
+  scale_fill_manual(values = c("No rating" = "red", "Rating 0 to 1" = "yellow", "Rating 1 to 2" = "orange", "Rating 2 to 3" = "green",
+                                "Rating 3 to 4" = "blue", "Rating 4 to 5" = "purple")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))
+```
+
+<p>From the above plot, according to category, the most no ratings (NA) are contributed by developer tools and food and drink applications, whereas weather apps and gaming apps contribute a higher number of ratings, indicating high user involvement.</p>
+
+### Most and least rated Apps
+
+```{r most_and_least_rated_apps_barplot_15_16}
+appData$User_Rating <- with(appData, ifelse(Average_User_Rating > 0, 'Yes Rating', 'No Rating'))
+
+genre_user_rating = subset(appData, select = c("Primary_Genre", "User_Rating"))
+# genre_user_rating
+
+agg_table <- genre_user_rating %>%
+             group_by(Primary_Genre, User_Rating) %>%
+             summarise(total_count = n(), .groups = 'drop') %>%
+             pivot_wider(names_from = User_Rating, values_from = total_count, values_fill = 0)
+colnames(agg_table) <- c("Primary_Genre", "No_Rating", "Yes_Rating")
+# print(agg_table)
+
+agg_table$Total_Rating <- agg_table$No_Rating + agg_table$Yes_Rating
+agg_table$no_rating_percent <- round((agg_table$No_Rating/agg_table$Total_Rating) * 100, 2)
+agg_table$yes_rating_percent <- round((agg_table$Yes_Rating/agg_table$Total_Rating) * 100, 2)
+# print(agg_table)
+
+#----------
+percent_rating_table <- subset(agg_table, select = c("Primary_Genre", "no_rating_percent", "yes_rating_percent"))
+
+least_rating <- percent_rating_table %>% arrange(desc(no_rating_percent))
+least_rating <- least_rating[1:10, ]
+# print(least_rating)
+
+most_rating <- percent_rating_table %>% arrange(desc(yes_rating_percent))
+most_rating <- most_rating[1:10, ]
+# print(most_rating)
+
+#-----------
+least_rating <- gather(least_rating, key = "Rating", value = "Count", -Primary_Genre)
+least_ratings_bar <- ggplot(least_rating, aes(x = Primary_Genre, y = Count, fill = Rating)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution of 'Rating' across 'Genre' among Lowest rating apps", caption = 'Bar chart', x = "Primary Genre", y = "Percentage of ratings", fill = "Rating") +
+  scale_fill_manual(values = c("yes_rating_percent" = "chartreuse3", "no_rating_percent" = "firebrick2")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+least_ratings_bar
+
+#---------
+most_rating <- gather(most_rating, key = "Rating", value = "Count", -Primary_Genre)
+most_ratings_bar <- ggplot(most_rating, aes(x = reorder(Primary_Genre, -Count), y = Count, fill = Rating)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution of 'Rating' across 'Genre' among Highest rating apps", caption = 'Bar chart', x = "Primary Genre", y = "Percentage of ratings", fill = "Rating") +
+  scale_fill_manual(values = c("yes_rating_percent" = "chartreuse3", "no_rating_percent" = "firebrick2")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+most_ratings_bar
+
+```
+
+<p>According to the aforementioned plots, the highest rated apps distribution of "Rating" across "Genre" shows that photo and video apps, games, and weather apps all contribute significantly to higher ratings. Developer tools and food & drink apps give the majority of the rating in the no ratings category and the least amount of rating in the ratings category among lowest rated apps, respectively, in the distribution of "Rating" across "Genre" among lowest rated apps.</p>
+
+## Analysis of App size
+
+### Frequency
+
+**Frequency of 'Size_Bytes' for sampled data**
+
+```{r sizebyte_freq_barplot_17}
+sampled_data$Size_MB <- sampled_data$Size_Bytes / (1024^2)
+
+sampled_data$Size_Group <- cut(sampled_data$Size_MB,
+                               breaks = seq(0, max(sampled_data$Size_MB), by = 50),
+                               labels = seq(25, max(sampled_data$Size_MB) - 25, by = 50))
+
+ggplot(sampled_data, aes(x = Size_Group)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of App Sizes (in MB) - Sampled Data",
+       x = "Size (MB)",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+<p>The Distribution of App Sizes (in MB) graph from the aforementioned plots shows that the bulk of apps fall into the 0--25 MB and 25--75 MB groups. This suggests that the majority of apps are modest, with usual sizes under 25MB, making the download and storage of apps easy on the device.</p>
+
+## Conclusion
+
+**Key Takeaways from the Mobile App Market Analysis:**
+<p>
+
+1.  **The gaming genre is ruling the app world, capturing a significant share of the market**:
+    -   Within the mobile app ecosystem, gaming apps are the dominant force. They have a substantial market share compared to other types of apps. This could be due to the popularity of mobile gaming, the variety of game genres available, and the high user engagement that gaming apps tend to attract.
+2.  **Apps with content rating of age 4+ are prevalent, constituting a whopping 80% of the market**:
+    -   This conclusion highlights that a significant portion of the app market is occupied by applications that has a minimum maturity of ages 4 and above. Despite the genre category, these apps take up almost over 75% of the total apps in each category with exception for a few. This could suggest a high demand for kid-oriented entertainment and educational tools.
+3.  **Free apps occupy a staggering 90% of the market**:
+    -   A significant majority of apps are available to users at no cost. This may be driven by various monetization strategies such as in-app advertisements, in-app purchases, or subscription models, which enable developers to generate revenue without charging upfront.
+4.  **Weather apps receive the most user ratings, while developer apps tend to have fewer ratings**:
+    -   Weather apps receive a high number of user ratings, indicating that users are actively engaged with these apps. It's likely that weather apps provide real-time information that users find valuable. On the other hand, apps developed by developers have fewer ratings, possibly indicating that they are niche or used by a specific audience.
+5.  **Most apps are compact, with sizes typically falling below 25MB, ensuring easy downloads and storage**:
+    -   Majority of apps are designed to be lightweight having relatively small file sizes. This is a user-friendly approach as it minimizes the use of the device's internal storage space and ensures that apps can be quickly downloaded even with limited internet bandwidth.
+
+These conclusions collectively provide insights into the current state of the mobile app market, including the dominance of gaming and children's apps, greater user engagement with weather apps, the prevalence of free apps, and the importance of keeping app sizes manageable for users.
+
+</p>
+--

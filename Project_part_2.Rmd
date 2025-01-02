@@ -1,0 +1,294 @@
+---
+title: "Predicting app costs in Apple App store"
+author: "Krishnasurya Gopalakrishnan, Monica Muniraj, Shashank Shivakumar, Srinivas Saiteja Tenneti"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3)
+
+library(ezids)
+library(tidyr)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(pROC)
+library(randomForest)
+library(corrplot)
+library(randomForest)
+library(doParallel)
+```
+
+## Introduction
+<p>
+In the dynamic world of mobile applications, a pressing question resonates among developers and investors: where should they channel their resources, and what elements truly dictate an app's success? As 2021 came to a close, the App Store, with its impressive roster of 1.6 million iOS applications, stood out as a hub of innovation and potential, even in comparison to Google's expansive Play Store with its 3.5 million apps.
+
+This report embarks on an analytical journey into the second-largest app marketplace worldwide -- Apple's App Store. Here, we aim to unravel the myriad factors that determine an app's trajectory, from its pricing and size to user ratings and categories. These aren't just statistics; they form the foundation of strategic decision-making.
+
+Our primary goal is straightforward: discern the pivotal variables that substantially impact an app's market success and profitability. For stakeholders, understanding these nuances is essential, providing a compass in the intensely competitive landscape of app development and marketing. This exploration aims to convert data into actionable insights, offering a roadmap to success.
+
+Join us in this analytical expedition, where data narratives guide our way, and each insight serves as a beacon for informed strategic choices. Step into a world where in-depth research becomes the linchpin to harnessing the vast potential of the mobile application universe.
+</p>
+
+## Project 1 analysis:
+<p>
+Based on the findings from Project Phase 1, it is evident that the mobile app market is predominantly influenced by several key factors. The gaming genre emerges as a market leader, demonstrating its wide appeal and high user engagement. Significantly, apps rated for ages 4 and above dominate the market, accounting for around 80% of all apps, which indicates a strong demand for family-friendly content. Furthermore, free apps constitute 90% of the market, a trend likely driven by alternative revenue models like in-app purchases and advertisements. Weather apps notably stand out for receiving the most user ratings, reflecting their high user interaction, while developer-oriented apps have a narrower user base, as seen in their fewer ratings. Additionally, the majority of apps are designed to be compact, typically under 25MB, catering to ease of download and efficient storage management. These insights collectively shape our understanding of the current mobile app landscape, highlighting the significance of gaming and children-friendly apps, user preferences for free and compact apps, and the high engagement with certain app categories like weather apps. 
+</p>
+
+## SMART Question: 
+<p>
+Forecasting the likelihood of new apps being offered for free or as paid versions.
+</p>
+
+## Descriptive statistics
+
+```{r}
+df = read.csv('appleAppData.csv')
+df <- na.omit(df)
+
+df$Released_Year <- year(df$Released)
+df$Updated_Year <- year(df$Updated)
+
+df$Primary_Genre <- as.factor(df$Primary_Genre)
+df$Content_Rating <- as.factor(df$Content_Rating)
+df$DeveloperId <- as.factor(df$DeveloperId)
+df$Released_Year <- as.factor(df$Released_Year)
+df$Updated_Year <- as.factor(df$Updated_Year)
+
+df$Size_MB <- df$Size_Bytes / (1024^2)
+df$Size_Group <- cut(df$Size_MB,
+                     breaks = seq(0, max(df$Size_MB), by = 50),
+                     labels = seq(25, max(df$Size_MB) - 25, by = 50))
+
+df$Primary_genre <- as.numeric(factor(df$Primary_Genre))
+df$Content_rating <- as.numeric(factor(df$Content_Rating))
+df$Free_Paid <- as.numeric(factor(df$Free))
+df$Developer_ID <- as.numeric(df$DeveloperId)
+df$Released_year <- as.numeric(df$Released_Year)
+df$Updated_year <- as.numeric(df$Updated_Year)
+df$Free <- as.factor(df$Free)
+levels(df$Free) <- c(0, 1)
+print(str(df))
+```
+
+## Evaluating Feature Importance in App Pricing Prediction Using Random Forest
+```{r}
+# values <- df$Size_MB
+# breaks <- c(0, 10,20, 30, 40, 50, 60, 70, 80, 100, Inf) 
+# labels <- c("0-10","10-20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-100", "Above 100")
+# groups <- cut(values, breaks = breaks, labels = labels, include.lowest = TRUE)
+# df$Size_Groups <- groups
+# features <- c("Primary_Genre", "Content_Rating", "Size_Groups", "Average_User_Rating", "Reviews", "Released_Year", "Updated_Year")
+# target <- "Free"
+# 
+# rf_model <- randomForest(as.factor(Free) ~ ., data = df[, c(features, target)], ntree = 100)
+# importance <- importance(rf_model)
+# print(importance)
+```
+<p>
+Result of randomForest feature selection:
+Variable                MeanDecreaseGini
+Primary_Genre           23069
+Size_MB                 26683
+Average_User_Rating     10302
+Reviews                 9688
+Released_Year           11493
+Updated_Year            7814
+Content_Rating          2244
+
+The importance of each feature is measured by the Mean Decrease in Gini coefficient, which indicates how much each feature contributes to the homogeneity of the nodes and leaves in the model. 
+
+- **Primary_Genre (23069)**: This feature has the highest importance score, suggesting that the genre of an app is a critical factor in determining its pricing model. Apps in certain genres are more likely to be free or paid, influencing the model's decision significantly.
+
+- **Size_MB (26683)**: The size of the app, measured in megabytes, is also a highly influential factor. This could indicate that larger apps (which might require more resources to develop) are more likely to be paid, or conversely, smaller apps tend to be free.
+
+- **Average_User_Rating (10302)**: This feature has a considerable impact on the model's predictions. It implies that the average user rating of an app influences its likelihood of being free or paid, possibly reflecting user expectations and satisfaction levels.
+
+- **Reviews (9688)**: The number of reviews an app receives is also an important factor. This could be due to the fact that more popular or widely used apps (which could correlate with a higher number of reviews) tend to have specific pricing strategies.
+
+- **Released_Year (11493) and Updated_Year (7814)**: The years when the app was released and last updated are moderately important. This might reflect market trends and changes in app pricing strategies over time.
+
+- **Content_Rating (2244)**: While still relevant, the content rating has the lowest importance score among the features. This suggests that while the intended audience age does play a role in pricing, it is less decisive compared to other factors like genre or size.
+
+In summary, the Random Forest model highlights the diverse factors that contribute to the pricing model of an app, with the genre and size being the most significant. These insights can guide app developers and marketers in understanding what aspects might influence an app's likelihood of being free or paid.
+</p>
+
+```{r}
+selected_columns <- c("Primary_Genre", "Size_MB", "Average_User_Rating", "Released_Year", "Free")
+df <- df[selected_columns]
+str(df)
+```
+
+## Logistic Regression
+### Methodology: Choosing Logistic Regression for Predicting App Pricing Models
+
+<p>
+In our analysis to predict whether mobile apps will be free or paid, we have chosen Logistic Regression as our primary statistical method. This decision is grounded in the nature of our target variable, which is binomial, presenting two distinct categories: free or paid. Logistic Regression is particularly adept at handling such binary outcomes. It operates by estimating the probability of an event occurrence, in this case, the likelihood of an app being free, based on various predictor variables such as app genre, target age group, and prevailing market trends. Its ability to provide probabilities and classify outcomes into distinct categories makes it an ideal choice for our predictive model. Furthermore, Logistic Regression is robust, relatively easy to implement, and interpret, which aids in the clear presentation and understanding of our results. These qualities collectively make Logistic Regression a fitting and reliable choice for our analysis in forecasting the pricing model of upcoming mobile apps.
+</p>
+
+```{r}
+logistic_model_2 <- glm(Free ~ .,data = df, family = binomial)
+# summary(logistic_model_2)
+```
+
+## Confusion Matrix for Logistic Regression
+```{r}
+predictions_2 <- factor(ifelse(predict(logistic_model_2, type = "response") > 0.5, 1, 0), levels = levels(df$Free))
+actual_values_2 <- factor(df$Free, levels = levels(df$Free))
+
+conf_matrix_2 <- confusionMatrix(predictions_2, actual_values_2)
+print(conf_matrix_2)
+```
+<p>
+The confusion matrix generated from our Logistic Regression model provides crucial insights into the model's performance in predicting whether apps are free or paid. The matrix indicates that out of the total predictions made, 12,100 were correctly predicted as paid (true negatives), and 1,121,792 were correctly predicted as free (true positives). However, there were 55,91 instances where paid apps were incorrectly predicted as free (false positives), and 90,402 instances where free apps were incorrectly predicted as paid (false negatives).
+
+The overall accuracy of the model is 92.2%, as indicated by the accuracy metric. This suggests that our model correctly predicts the pricing model of the apps 92.2% of the time. The 95% Confidence Interval for the accuracy is between 92.1% and 92.2%, indicating that the model's accuracy is consistently high.
+
+The Kappa statistic is 0.181, which, while indicating some level of agreement between the predictions and actual values, suggests that the agreement is relatively low. This is corroborated by the balanced accuracy (the average of sensitivity and specificity) being 55.654%, showing that the model's ability to accurately identify both classes (free and paid) is moderate.
+
+Sensitivity, or the true positive rate, is 11.805%. This indicates that the model correctly identifies 11.805% of the actual free apps. Specificity, or the true negative rate, is high at 99.504%, meaning the model is highly effective at identifying paid apps correctly.
+
+The Positive Predictive Value, or precision, is 68.396%. This means that when the model predicts an app is paid, there's a 68.396% chance that it is correct. The Negative Predictive Value is 92.542%, indicating a high probability that when the model predicts an app is free, it is indeed free.
+
+The model's No Information Rate is 91.7%, and the P-Value [Accuracy > NIR] is less than 2e-16, which suggests that the model is statistically significantly better than a naive model that would always predict the most frequent class.
+
+Mcnemar's Test P-Value is also less than 2e-16, indicating a significant difference in the performance of the model between the two classes.
+
+In summary, while the model shows high overall accuracy and specificity, its sensitivity and kappa score are relatively low. This indicates that the model is more reliable in predicting paid apps than free apps. These results should be considered in the context of the model's application, and further refinement may be required to improve its sensitivity.
+
+</p>
+
+## Distribution of Target variable
+```{r}
+free_apps <- df[df$Free == 1, ]
+paid_apps <- df[df$Free == 0, ]
+
+print(nrow(free_apps))
+print(nrow(paid_apps))
+```
+
+<p>
+The data exploration has revealed a significant imbalance in the distribution of our target variable, which categorizes apps as either free (1) or paid (0). This imbalance is evident in the number of instances of each class: there are 1,127,383 free apps compared to only 102,502 paid apps. This disparity represents an approximate ratio of 11:1, indicating that for every paid app in our dataset, there are 11 free apps.
+
+This imbalance in the dataset is a critical factor to consider, as it can lead to biased predictions in our machine learning models. Models trained on this data are likely to be better at predicting the more common class (free apps) due to their higher representation in the data. Consequently, the model might underperform in accurately identifying the less common class (paid apps), as it has significantly fewer examples to learn from.
+
+Such a skewed distribution can result in a model that, despite potentially high overall accuracy, may not truly reflect its effectiveness in predicting both classes equally well. This scenario is known as class imbalance, and it is a common issue in machine learning that can lead to misleadingly optimistic performance metrics, particularly if those metrics do not account for the distribution of the classes.
+
+To address this issue and ensure a more balanced and fair representation in our predictive modeling, we may need to employ techniques such as resampling the dataset, either by oversampling the minority class (paid apps) or undersampling the majority class (free apps), or applying advanced algorithms that are designed to handle imbalanced data. This will help in improving the model's ability to generalize and accurately predict both free and paid apps, thereby enhancing the robustness and reliability of our predictive analysis. 
+</p>
+
+## Balancing the Dataset for Equitable Model Training
+```{r}
+free_apps_sample <- free_apps %>% sample_n(102502)
+merged_df <- rbind(free_apps_sample, paid_apps)
+# str(merged_df)
+# print(nrow(free_apps_sample))
+# print(head(merged_df))
+merged_df <- merged_df[sample(1:205004), ]
+# print(head(merged_df))
+merged_df_free_apps <- df[df$Free == 1, ]
+merged_df_paid_apps <- df[df$Free == 0, ]
+# print(nrow(merged_df_free_apps))
+# print(nrow(merged_df_paid_apps))
+```
+
+To make the distribution of target variable equal in the data before feeding it to train the model, we take the instances of "free" apps equivalent to that of the number of instances the "paid" apps occur in the dataset and shuffle them before combining it with the subset of data that only has the instances of paid apps.
+
+## Logistic Regression on the balanced data
+
+```{r}
+logistic_model <- glm(Free ~ ., data = merged_df, family = binomial)
+summary(logistic_model)
+```
+
+```{r}
+predictions <- factor(ifelse(predict(logistic_model, type = "response") > 0.5, 1, 0), levels = levels(merged_df$Free))
+actual_values <- factor(merged_df$Free, levels = levels(merged_df$Free))
+
+conf_matrix <- confusionMatrix(predictions, actual_values)
+print(conf_matrix)
+```
+
+From the above result, we can see that the model accuracy is now at 70% and what is interesting to find is that the balanced accuracy is also the same unlike before. Although our accuracy has dropped by 20 percentage points compared to the previous model trained on the unbalanced data, this model would yield in better predictions. In these such cases, accuracy should not be the only metric to be taken into account. Reliability is more important than raw accuracy.
+
+```{r}
+selected_columns_3 <- c("Size_MB", "Average_User_Rating", "Released_Year", "Free")
+dff <- df[selected_columns_3]
+colnames(dff)
+nrow(dff)
+```
+
+## Random Forest Model
+```{r}
+set.seed(123)
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+rf_model <- randomForest(Free ~ ., data = merged_df, ntree = 500, mtry = sqrt(ncol(merged_df) - 1), ncores = detectCores())
+```
+
+```{r}
+summary(rf_model)
+```
+
+<p>
+The Random Forest model was executed using the 'randomForest' package in R, with the target variable 'Free' predicted from various other predictor variables in the data frame. Key aspects of the model setup include:
+
+- **Model Specification**: The model was trained on the 'merged_df' dataset, with 500 trees (`ntree = 500`) and the number of variables tried at each split set to the square root of the total number of variables minus one (`mtry = sqrt(ncol(merged_df) - 1)`).
+- **Parallel Processing**: The model utilized parallel processing to enhance computational efficiency, employing all available cores (`ncores = detectCores()`).
+
+The model's output summary provides several important metrics:
+
+- **Predicted Values**: The model generated 205,004 predicted values, categorized as factors.
+- **Error Rate**: The 'err.rate' indicates the model's error rate across different trees.
+- **Confusion Matrix**: A 6-element confusion matrix offers a breakdown of prediction accuracy.
+- **Votes**: A matrix of size 410,008 indicates class votes for each observation.
+- **OOB Times**: The 'oob.times' (Out-of-Bag times) shows how often each data point was left out of the bootstrap sample and used in the error estimation.
+- **Variable Importance**: The 'importance' metric outlines the significance of each predictor variable in the model.
+- **Number of Trees and Variables per Split**: The model used 500 trees (`ntree`) and the defined number of variables per split (`mtry`).
+
+This Random Forest model provides a comprehensive analysis of the 'Free' variable in the dataset, employing advanced computational techniques for efficient and accurate predictions. The model's performance metrics, such as error rate and confusion matrix, offer valuable insights into its prediction accuracy and reliability.
+</p>
+
+## Performance Evaluation of Random Forest Model
+```{r}
+predictions_rf <- predict(rf_model, newdata = merged_df, type = "response")
+results_rf <- data.frame(Actual = merged_df$Free, Predicted = predictions_rf)
+confusion_matrix_rf <- confusionMatrix(table(results_rf$Predicted, results_rf$Actual))
+print(confusion_matrix_rf)
+```
+<p>
+The confusion matrix derived from the Random Forest model reveals significant insights into its predictive accuracy:
+
+- **Confusion Matrix Breakdown**: The model correctly predicted 86,170 instances of class 0 (presumably 'paid apps') and 90,783 instances of class 1 ('free apps'). There were 11,719 false positives (class 0 predicted when it was actually class 1) and 16,332 false negatives (class 1 predicted when it was actually class 0).
+
+- **Accuracy**: The model achieved an overall accuracy of 86.3%, with a 95% Confidence Interval (CI) ranging from 86.2% to 86.5%. This indicates a high level of predictive accuracy.
+
+- **Kappa Statistic**: A Kappa value of 0.726 suggests a substantial agreement between the predicted and actual classifications, beyond what would be expected by chance.
+
+- **Mcnemar's Test**: The P-value from Mcnemar's Test is less than 2e-16, indicating a significant difference in the model's prediction errors between the two classes.
+
+- **Sensitivity and Specificity**: The model has a sensitivity (true positive rate) of 84.1% and a specificity (true negative rate) of 88.6%, indicating its effectiveness in correctly identifying both 'paid' and 'free' apps.
+
+- **Predictive Values**: The Positive Predictive Value (PPV) is 88.0%, and the Negative Predictive Value (NPV) is 84.8%, both of which are high, showcasing the model's reliability in its predictions.
+
+- **Balanced Accuracy**: The balanced accuracy of 86.3% further confirms the model's robustness in handling both classes evenly.
+
+In summary, the Random Forest model demonstrates high accuracy, sensitivity, and specificity in predicting the 'Free' status of apps, with a substantial agreement as indicated by the Kappa statistic. The balanced accuracy and predictive values highlight the model's effectiveness in classifying both 'paid' and 'free' apps accurately.
+</p>
+
+## Conclusion
+<p>
+
+1. **Addressing Skewness in Data**: Recognizing and addressing data skewness is crucial in real-world data analysis. This step is necessary to avoid developing models that inaccurately represent underlying patterns and trends, ensuring the validity of model predictions.
+
+2. **Model Performance and Data Balance**: Models trained on unbalanced data may show high accuracy but can be misleading, often over-predicting the majority class. In contrast, models trained on balanced data provide a more truthful representation of predictive capabilities across all classes, even if this means a slight reduction in overall accuracy.
+
+3. **Reliability and Continuous Improvement**: Emphasize reliability over raw accuracy in models. A balanced approach, despite potentially lower accuracy figures, reflects true model performance and is more trustworthy. The model development process should be iterative, focusing on continuous improvement and adaptation to enhance accuracy and dependability of predictions. 
+
+In conclusion, these insights underscore the importance of understanding and addressing data skewness in predictive modeling. By prioritizing balanced data and reliability over raw accuracy, and committing to an iterative process of improvement, we can develop more effective and trustworthy predictive models.
+
+</p>
