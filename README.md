@@ -1,5 +1,7 @@
 # Analytical Insights Into IOS App Profitability: A Comprehensive Study of the Apple App Store
 
+---
+
 ## Introduction
 
 In the dynamic world of mobile applications, a pressing question resonates among developers and investors: where should they channel their resources, and what elements truly dictate an app’s success? As 2021 came to a close, the App Store, with its impressive roster of 1.6 million iOS applications, stood out as a hub of innovation and potential, even in comparison to Google’s expansive Play Store with its 3.5 million apps.
@@ -9,6 +11,8 @@ This report embarks on an analytical journey into the second-largest app marketp
 Our primary goal is straightforward: discern the pivotal variables that substantially impact an app’s market success and profitability. For stakeholders, understanding these nuances is essential, providing a compass in the intensely competitive landscape of app development and marketing. This exploration aims to convert data into actionable insights, offering a roadmap to success.
 
 Join us in this analytical expedition, where data narratives guide our way, and each insight serves as a beacon for informed strategic choices. Step into a world where in-depth research becomes the linchpin to harnessing the vast potential of the mobile application universe.
+
+---
 
 ## Objective
 
@@ -22,6 +26,8 @@ The primary objective of this project is to analyze and predict the likelihood o
 
 This analysis will provide actionable insights to app developers and marketers, enabling them to make data-driven decisions to optimize app development, pricing strategies, and market positioning in the competitive app ecosystem.
 
+---
+
 ## SMART Questions
 
 1. **Market Share Analysis:** We will explore which app categories and age groups dominate the market share on the Apple App Store.
@@ -32,6 +38,8 @@ This analysis will provide actionable insights to app developers and marketers, 
 
 4. **Impact of Release Year on Ratings:** We'll analyze whether the release year of an app has a consequential impact on acquiring higher rating counts.
 
+---
+
 ## Dataset
 
 The dataset used for this project can be found at [Apple App Store Dataset](https://www.kaggle.com/datasets/gauthamp10/apple-appstore-apps).
@@ -39,9 +47,13 @@ The dataset used for this project can be found at [Apple App Store Dataset](http
 - Number of observations (roughly): **1,230,376**
 - Number of features: **21**
 
+---
+
 ## GitHub Repository
 
 To access the code and project files, visit our GitHub repository: [Project Repository](https://github.com/Srinivas39322/DATS_6101_11_GROUP_7).
+
+---
 
 ## Key Findings
 
